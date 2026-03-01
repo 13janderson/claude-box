@@ -26,10 +26,10 @@ restart: ## Restart the sandbox container
 stop: ## Stop the sandbox container
 	./sandbox stop
 
-clean: ## Stop and remove this directory's container
+clean: ## Stop and remove this directory's container (conversation history is preserved)
 	./sandbox clean
 
-purge: ## Stop and remove this directory's container and the shared image
+purge: ## Stop and remove this directory's container, conversation history, and the shared image
 	./sandbox purge
 
 logs: ## Tail container logs

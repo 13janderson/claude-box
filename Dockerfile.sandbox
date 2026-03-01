@@ -35,4 +35,6 @@ COPY --chown=sandbox:sandbox entrypoint.sh /home/sandbox/entrypoint.sh
 RUN chmod +x /home/sandbox/entrypoint.sh
 
 ENTRYPOINT ["/home/sandbox/entrypoint.sh"]
+WORKDIR /home/sandbox/project
+
 CMD ["sleep", "infinity"]

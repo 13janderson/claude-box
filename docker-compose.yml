@@ -11,11 +11,20 @@ services:
     environment:
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
-      # Mounted read-only; entrypoint.sh merges auth into a fresh container config
+      # Mounted read-only; entrypoint.sh merges auth into the container config
       - ~/.claude.json:/home/sandbox/.claude.json.host:ro
+      # Named volume persists conversation history across container recreations.
+      # The credentials file bind-mount overlays the same path inside the volume.
+      - claude-data:/home/sandbox/.claude
       - ~/.claude/.credentials.json:/home/sandbox/.claude/.credentials.json:ro
       - ${PROJECT_PATH:-.}:/home/sandbox/project
     mem_limit: 2g
     cpus: 2
     security_opt:
       - no-new-privileges:true
+
+volumes:
+  # Scoped per project via COMPOSE_PROJECT_NAME (= SANDBOX_NAME).
+  # `clean` removes the container but leaves this volume intact.
+  # `purge` removes the container, image, and this volume.
+  claude-data:

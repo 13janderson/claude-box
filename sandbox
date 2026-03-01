@@ -80,6 +80,8 @@ _ensure_running() {
     fi
 }
 
+PROJECT_DIR="/home/sandbox/project"
+
 # Build docker exec env args for ANTHROPIC_API_KEY passthrough
 _env_args() {
     if [[ -n "${ANTHROPIC_API_KEY:-}" ]]; then
@@ -111,28 +113,28 @@ case "${1:-}" in
     clean)
         docker compose down ;;
     purge)
-        docker compose down --rmi local ;;
+        docker compose down -v --rmi local ;;
     logs)
         docker compose logs -f ;;
     shell)
         _ensure_running
-        docker exec -it "$SANDBOX_NAME" bash ;;
+        docker exec -it -w "$PROJECT_DIR" "$SANDBOX_NAME" bash ;;
     exec)
         shift
         _ensure_running
-        docker exec -it $(_env_args) "$SANDBOX_NAME" "$@" ;;
+        docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" "$@" ;;
     *)
         _ensure_running
         _refresh_credentials
         if [[ $# -gt 0 ]]; then
             # Prompt passed as argument(s)
-            docker exec -i $(_env_args) "$SANDBOX_NAME" claude -p "$*"
+            docker exec -i -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude -p "$*"
         elif [[ ! -t 0 ]]; then
             # Piped stdin
-            docker exec -i $(_env_args) "$SANDBOX_NAME" claude -p "$(cat)"
+            docker exec -i -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude -p "$(cat)"
         else
             # Interactive
-            docker exec -it $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue || \
-            docker exec -it $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions
+            docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue || \
+            docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions
         fi ;;
 esac
