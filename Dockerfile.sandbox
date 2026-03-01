@@ -1,0 +1,31 @@
+FROM debian:bookworm-slim@sha256:98f4b71de414932439ac6ac690d7060df1f27161073c5036a7553723881bffbe
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+ARG COPY_CWD=1
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+  bash \
+  ca-certificates \
+  curl \
+  git \
+  jq \
+  python3 \
+  vim \
+  ripgrep \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --shell /bin/bash sandbox
+USER sandbox
+WORKDIR /home/sandbox
+
+COPY --chown=sandbox:sandbox . project
+RUN if [ "${COPY_CWD}" != "1" ]; then rm -rf project; fi
+
+RUN curl -fsSL https://claude.ai/install.sh | bash
+ENV PATH="/home/sandbox/.local/bin:${PATH}"
+
+RUN jq '.hasCompletedOnboarding = true | .projects["/home/sandbox"] = {"allowedTools":[],"mcpContextUris":[],"mcpServers":{},"enabledMcpjsonServers":[],"disabledMcpjsonServers":[],"hasTrustDialogAccepted":true,"projectOnboardingSeenCount":1,"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":false} | .projects["/home/sandbox/project"] = {"allowedTools":[],"mcpContextUris":[],"mcpServers":{},"enabledMcpjsonServers":[],"disabledMcpjsonServers":[],"hasTrustDialogAccepted":true,"projectOnboardingSeenCount":1,"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":false}' ~/.claude.json > /tmp/.claude.json && mv /tmp/.claude.json ~/.claude.json
+
+CMD ["sleep", "infinity"]

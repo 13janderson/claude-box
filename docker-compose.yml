@@ -1,0 +1,9 @@
+services:
+  sandbox:
+    build:
+      context: .
+      dockerfile: Dockerfile.sandbox
+    volumes:
+      - ~/.claude.json:/home/sandbox/.claude.json
+      - ~/.claude/.credentials.json:/home/sandbox/.claude/.credentials.json
+      - .sandbox:/home/sandbox/.sandbox
