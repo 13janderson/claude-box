@@ -2,8 +2,6 @@ FROM debian:bookworm-slim@sha256:98f4b71de414932439ac6ac690d7060df1f27161073c503
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-ARG COPY_CWD=1
-
 RUN apt-get update \
   && apt-get install -y --no-install-recommends \
   bash \
@@ -20,12 +18,21 @@ RUN useradd --create-home --shell /bin/bash sandbox
 USER sandbox
 WORKDIR /home/sandbox
 
-COPY --chown=sandbox:sandbox . project
-RUN if [ "${COPY_CWD}" != "1" ]; then rm -rf project; fi
-
 RUN curl -fsSL https://claude.ai/install.sh | bash
 ENV PATH="/home/sandbox/.local/bin:${PATH}"
 
+# Pre-configure project trust settings as a fallback for API key auth
+# (when ANTHROPIC_API_KEY is used instead of mounting ~/.claude.json).
+# When a host config is mounted, entrypoint.sh overrides this at runtime.
 RUN jq '.hasCompletedOnboarding = true | .projects["/home/sandbox"] = {"allowedTools":[],"mcpContextUris":[],"mcpServers":{},"enabledMcpjsonServers":[],"disabledMcpjsonServers":[],"hasTrustDialogAccepted":true,"projectOnboardingSeenCount":1,"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":false} | .projects["/home/sandbox/project"] = {"allowedTools":[],"mcpContextUris":[],"mcpServers":{},"enabledMcpjsonServers":[],"disabledMcpjsonServers":[],"hasTrustDialogAccepted":true,"projectOnboardingSeenCount":1,"hasClaudeMdExternalIncludesApproved":false,"hasClaudeMdExternalIncludesWarningShown":false}' ~/.claude.json > /tmp/.claude.json && mv /tmp/.claude.json ~/.claude.json
 
+# Copy project snapshot (controlled by COPY_CWD; volume mount overlays at runtime)
+ARG COPY_CWD=1
+COPY --chown=sandbox:sandbox . project
+RUN if [ "${COPY_CWD}" != "1" ]; then rm -rf project; fi
+
+COPY --chown=sandbox:sandbox entrypoint.sh /home/sandbox/entrypoint.sh
+RUN chmod +x /home/sandbox/entrypoint.sh
+
+ENTRYPOINT ["/home/sandbox/entrypoint.sh"]
 CMD ["sleep", "infinity"]

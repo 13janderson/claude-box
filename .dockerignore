@@ -1,0 +1,8 @@
+.git
+.claude
+*.env
+.env*
+*.credentials.json
+docker-compose*.yml
+Dockerfile*
+entrypoint.sh
