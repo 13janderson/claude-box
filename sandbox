@@ -22,7 +22,11 @@ cd "$SCRIPT_DIR"
 
 _usage() {
     cat <<EOF
-Usage: $(basename "$0") [COMMAND | PROMPT]
+Usage: $(basename "$0") [FLAGS] [COMMAND | PROMPT]
+
+Flags:
+  --new         Stop any existing container and spawn a fresh one
+  --existing    Prefer an already-running container; start one if none exists
 
 Commands:
   build       Rebuild the sandbox image
@@ -50,6 +54,8 @@ Environment:
 
 Examples:
   ./sandbox                              # uses current directory
+  ./sandbox --new                        # force a fresh container
+  ./sandbox --existing                   # only use already-running container
   ./sandbox "refactor the auth module"
   echo "what does main.go do?" | ./sandbox
   ./sandbox shell
@@ -73,6 +79,13 @@ _ensure_built() {
 }
 
 _ensure_running() {
+    if [[ "${SANDBOX_EXISTING:-}" == "1" ]] && _is_running; then
+        return
+    fi
+    if [[ "${SANDBOX_NEW:-}" == "1" ]]; then
+        echo "[sandbox] stopping existing container for fresh start..." >&2
+        docker compose down 2>/dev/null || true
+    fi
     _ensure_built
     if ! _is_running; then
         echo "[sandbox] starting ${SANDBOX_NAME}..." >&2
@@ -94,6 +107,22 @@ _env_args() {
 _refresh_credentials() {
     docker exec "$SANDBOX_NAME" /home/sandbox/entrypoint.sh true 2>/dev/null || true
 }
+
+# Parse leading flags
+SANDBOX_NEW=0
+SANDBOX_EXISTING=0
+while [[ "${1:-}" == --new || "${1:-}" == --existing ]]; do
+    case "$1" in
+        --new)      SANDBOX_NEW=1 ;;
+        --existing) SANDBOX_EXISTING=1 ;;
+    esac
+    shift
+done
+if [[ "$SANDBOX_NEW" == "1" && "$SANDBOX_EXISTING" == "1" ]]; then
+    echo "[sandbox] error: --new and --existing are mutually exclusive" >&2
+    exit 1
+fi
+export SANDBOX_NEW SANDBOX_EXISTING
 
 case "${1:-}" in
     help|--help|-h)
