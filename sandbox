@@ -141,7 +141,7 @@ case "${1:-}" in
         docker compose logs -f ;;
     list-sessions)
         _ensure_running
-        docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --resume ;;
+        docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --resume --dangerously-skip-permissions;;
     shell)
         _ensure_running
         docker exec -it -w "$PROJECT_DIR" "$SANDBOX_NAME" bash ;;
