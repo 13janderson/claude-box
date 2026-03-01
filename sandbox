@@ -25,8 +25,8 @@ _usage() {
 Usage: $(basename "$0") [FLAGS] [COMMAND | PROMPT]
 
 Flags:
-  --new         Stop any existing container and spawn a fresh one
-  --existing    Prefer an already-running container; start one if none exists
+  --new         Start a fresh Claude session (no --continue)
+  --existing    Resume the most recent Claude session (--continue)
 
 Commands:
   build       Rebuild the sandbox image
@@ -54,8 +54,8 @@ Environment:
 
 Examples:
   ./sandbox                              # uses current directory
-  ./sandbox --new                        # force a fresh container
-  ./sandbox --existing                   # only use already-running container
+  ./sandbox --new                        # start a fresh Claude session
+  ./sandbox --existing                   # resume most recent Claude session
   ./sandbox "refactor the auth module"
   echo "what does main.go do?" | ./sandbox
   ./sandbox shell
@@ -79,13 +79,6 @@ _ensure_built() {
 }
 
 _ensure_running() {
-    if [[ "${SANDBOX_EXISTING:-}" == "1" ]] && _is_running; then
-        return
-    fi
-    if [[ "${SANDBOX_NEW:-}" == "1" ]]; then
-        echo "[sandbox] stopping existing container for fresh start..." >&2
-        docker compose down 2>/dev/null || true
-    fi
     _ensure_built
     if ! _is_running; then
         echo "[sandbox] starting ${SANDBOX_NAME}..." >&2
@@ -163,7 +156,13 @@ case "${1:-}" in
             docker exec -i -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude -p "$(cat)"
         else
             # Interactive
-            docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue || \
-            docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions
+            if [[ "${SANDBOX_NEW:-0}" == "1" ]]; then
+                docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions
+            elif [[ "${SANDBOX_EXISTING:-0}" == "1" ]]; then
+                docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue
+            else
+                docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue || \
+                docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --dangerously-skip-permissions
+            fi
         fi ;;
 esac
