@@ -3,7 +3,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.sandbox
-    container_name: claude-sandbox
+    container_name: ${SANDBOX_NAME:-claude-sandbox}
     stdin_open: true
     tty: true
     volumes:

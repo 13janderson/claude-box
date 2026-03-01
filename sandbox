@@ -1,0 +1,79 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export SANDBOX_NAME="${SANDBOX_NAME:-claude-sandbox}"
+export PROJECT_PATH="${PROJECT_PATH:-$SCRIPT_DIR}"
+
+cd "$SCRIPT_DIR"
+
+_usage() {
+    cat <<EOF
+Usage: $(basename "$0") [COMMAND | PROMPT]
+
+Commands:
+  build       Rebuild the sandbox image
+  shell       Open a bash shell in the sandbox
+  stop        Stop the sandbox container
+  clean       Stop and remove the container and image
+  logs        Tail container logs
+  help        Show this message
+
+If no command is given:
+  - With a TTY:            starts an interactive Claude session
+  - With a prompt argument: runs Claude non-interactively
+  - With piped stdin:       passes stdin as the prompt
+
+Environment:
+  SANDBOX_NAME      Container name            (default: claude-sandbox)
+  PROJECT_PATH      Project directory to mount (default: script directory)
+  ANTHROPIC_API_KEY API key as an alternative to OAuth credentials
+
+Examples:
+  ./sandbox
+  ./sandbox "refactor the auth module"
+  echo "what does main.go do?" | ./sandbox
+  ./sandbox shell
+  SANDBOX_NAME=proj-b PROJECT_PATH=~/proj-b ./sandbox
+EOF
+}
+
+_is_running() {
+    docker ps --filter "name=^${SANDBOX_NAME}$" --format '{{.Names}}' 2>/dev/null \
+        | grep -q "^${SANDBOX_NAME}$"
+}
+
+_ensure_running() {
+    if ! _is_running; then
+        echo "[sandbox] starting ${SANDBOX_NAME}..." >&2
+        docker compose up -d
+    fi
+}
+
+case "${1:-}" in
+    help|--help|-h)
+        _usage; exit 0 ;;
+    build)
+        docker compose build ;;
+    stop)
+        docker compose stop ;;
+    clean)
+        docker compose down --rmi local ;;
+    logs)
+        docker compose logs -f ;;
+    shell)
+        _ensure_running
+        docker exec -it "$SANDBOX_NAME" bash ;;
+    *)
+        _ensure_running
+        if [[ $# -gt 0 ]]; then
+            # Prompt passed as argument(s)
+            docker exec -i "$SANDBOX_NAME" claude -p "$*"
+        elif [[ ! -t 0 ]]; then
+            # Piped stdin
+            docker exec -i "$SANDBOX_NAME" claude -p "$(cat)"
+        else
+            # Interactive
+            docker exec -it "$SANDBOX_NAME" claude --dangerously-skip-permissions --continue
+        fi ;;
+esac
