@@ -3,9 +3,13 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.sandbox
+    image: ${IMAGE_NAME:-claude-sandbox}
     container_name: ${SANDBOX_NAME:-claude-sandbox}
+    restart: unless-stopped
     stdin_open: true
     tty: true
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
     volumes:
       # Mounted read-only; entrypoint.sh merges auth into a fresh container config
       - ~/.claude.json:/home/sandbox/.claude.json.host:ro

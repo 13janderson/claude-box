@@ -5,4 +5,3 @@
 *.credentials.json
 docker-compose*.yml
 Dockerfile*
-entrypoint.sh
