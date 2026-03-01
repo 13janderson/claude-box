@@ -38,6 +38,7 @@ Commands:
   clean       Stop and remove this directory's container
   purge       Stop and remove this directory's container and the shared image
   logs        Tail container logs
+  list-sessions  List and resume a previous Claude session
   help        Show this message
 
 If no command is given:
@@ -138,6 +139,9 @@ case "${1:-}" in
         docker compose down -v --rmi local ;;
     logs)
         docker compose logs -f ;;
+    list-sessions)
+        _ensure_running
+        docker exec -it -w "$PROJECT_DIR" $(_env_args) "$SANDBOX_NAME" claude --resume ;;
     shell)
         _ensure_running
         docker exec -it -w "$PROJECT_DIR" "$SANDBOX_NAME" bash ;;
